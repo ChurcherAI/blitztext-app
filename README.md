@@ -102,14 +102,31 @@ Full Disk Access is not required. If auto-paste does not work even though transc
 The preview has no custom backend.
 
 ```text
-Online transcription: Your Mac -> OpenAI Audio Transcriptions API
+Online transcription: Your Mac -> OpenAI Audio Transcriptions API (or Mistral Audio Transcriptions API, see below)
 Text rewriting:       Your Mac -> OpenAI Chat Completions API
 Local transcription:  Your Mac -> WhisperKit/CoreML on device
 ```
 
-The app stores your OpenAI API key in the user's macOS Keychain.
+The app stores your OpenAI (and, in this fork, Mistral) API key in the user's macOS Keychain.
 
 Read [docs/privacy.md](docs/privacy.md) before using the preview with sensitive content.
+
+## Fork Addition: Mistral Voxtral Mini Transcription
+
+This fork adds **Mistral's Voxtral Mini** (`voxtral-mini-latest`) as a second, selectable online transcription provider alongside OpenAI Whisper — useful if you already have a Mistral account/Pro plan and would rather not bring an OpenAI key just for transcription.
+
+What changed:
+
+- **New transcription provider switch**: In **Settings → Zugang**, choose between **OpenAI (Whisper)** and **Mistral (Voxtral Mini)** for the online Blitztext transcription workflow.
+- **Separate, secure key storage**: Your Mistral API key is stored in its own macOS Keychain entry, independent from your OpenAI key. Nothing is shared between the two.
+- **Same privacy model as upstream**: In Mistral mode, audio is sent directly from your Mac to `https://api.mistral.ai/v1/audio/transcriptions` using the `voxtral-mini-latest` model — no Blitztext backend, no extra hop.
+- **Response-format fix**: Mistral's API returns a JSON object (including usage metadata) even when `response_format=text` is requested, unlike OpenAI which returns plain text. This fork unwraps the `text` field automatically so you get clean transcribed text either way.
+
+Notes:
+
+- Rewriting workflows (Blitztext+, $%&!, :)) still require an OpenAI key and are unaffected by this change.
+- Secure local mode (WhisperKit/CoreML) still takes priority when enabled — the online provider switch only applies when local mode is off.
+- See the implementation in `BlitztextMac/Services/TranscriptionService.swift`, `BlitztextMac/Services/KeychainService.swift`, and `BlitztextMac/Features/Settings/SettingsContentView.swift`.
 
 ## Project Structure
 
