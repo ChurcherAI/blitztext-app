@@ -23,6 +23,7 @@ final class TranscriptionWorkflow: Workflow {
     private let customTerms: [String]
     private let language: String
     private let backend: TranscriptionBackend
+    private let provider: TranscriptionProvider
     private let localModelName: String
     private var transcriptionTask: Task<Void, Never>?
 
@@ -31,12 +32,14 @@ final class TranscriptionWorkflow: Workflow {
         customTerms: [String] = [],
         language: String = "de",
         backend: TranscriptionBackend = .remote,
+        provider: TranscriptionProvider = .openAIWhisper,
         localModelName: String = LocalTranscriptionService.recommendedFastModelName
     ) {
         self.type = type
         self.customTerms = customTerms
         self.language = language
         self.backend = backend
+        self.provider = provider
         self.localModelName = localModelName
     }
 
@@ -100,6 +103,7 @@ final class TranscriptionWorkflow: Workflow {
                 case .remote:
                     text = try await TranscriptionService.transcribe(
                         audioURL: url,
+                        provider: provider,
                         customTerms: vocabularyHints,
                         language: requestLanguage
                     )

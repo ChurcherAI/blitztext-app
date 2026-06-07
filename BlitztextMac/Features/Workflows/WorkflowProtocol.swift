@@ -122,19 +122,22 @@ struct AppSettings: Codable {
     var secureLocalModeEnabled: Bool = false
     var selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName
     var hasAutoSelectedFastLocalModel: Bool = false
+    var transcriptionProvider: TranscriptionProvider = .openAIWhisper
 
     init(
         hotkeyMode: HotkeyMode = .hold,
         hasSeenOnboarding: Bool = false,
         secureLocalModeEnabled: Bool = false,
         selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName,
-        hasAutoSelectedFastLocalModel: Bool = false
+        hasAutoSelectedFastLocalModel: Bool = false,
+        transcriptionProvider: TranscriptionProvider = .openAIWhisper
     ) {
         self.hotkeyMode = hotkeyMode
         self.hasSeenOnboarding = hasSeenOnboarding
         self.secureLocalModeEnabled = secureLocalModeEnabled
         self.selectedLocalTranscriptionModelName = selectedLocalTranscriptionModelName
         self.hasAutoSelectedFastLocalModel = hasAutoSelectedFastLocalModel
+        self.transcriptionProvider = transcriptionProvider
     }
 
     enum CodingKeys: String, CodingKey {
@@ -143,6 +146,7 @@ struct AppSettings: Codable {
         case secureLocalModeEnabled
         case selectedLocalTranscriptionModelName
         case hasAutoSelectedFastLocalModel
+        case transcriptionProvider
     }
 
     init(from decoder: Decoder) throws {
@@ -158,12 +162,37 @@ struct AppSettings: Codable {
             Bool.self,
             forKey: .hasAutoSelectedFastLocalModel
         ) ?? false
+        transcriptionProvider = try container.decodeIfPresent(
+            TranscriptionProvider.self,
+            forKey: .transcriptionProvider
+        ) ?? .openAIWhisper
     }
 }
 
 enum TranscriptionBackend: String, Codable {
     case remote
     case local
+}
+
+enum TranscriptionProvider: String, Codable, CaseIterable, Identifiable {
+    case openAIWhisper
+    case mistralVoxtral
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .openAIWhisper: return "OpenAI (Whisper)"
+        case .mistralVoxtral: return "Mistral (Voxtral Mini)"
+        }
+    }
+
+    var keychainKey: KeychainKey {
+        switch self {
+        case .openAIWhisper: return .openAIAPIKey
+        case .mistralVoxtral: return .mistralAPIKey
+        }
+    }
 }
 
 // MARK: - Workflow Settings

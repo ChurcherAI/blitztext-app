@@ -60,7 +60,9 @@ final class AppState {
 
     // Computed
     var isConfigured: Bool {
-        KeychainService.isConfigured || !LocalTranscriptionService.installedModels().isEmpty
+        KeychainService.isConfigured
+            || KeychainService.load(key: .mistralAPIKey) != nil
+            || !LocalTranscriptionService.installedModels().isEmpty
     }
     var shouldShowOnboarding: Bool {
         !isConfigured && !appSettings.hasSeenOnboarding
@@ -108,7 +110,12 @@ final class AppState {
                     ? "Lokal: \(LocalTranscriptionModel.displayName(for: modelName))."
                     : "Lokales WhisperKit-Modell fehlt."
             }
-            return "Online: Whisper über OpenAI."
+            switch appSettings.transcriptionProvider {
+            case .openAIWhisper:
+                return "Online: Whisper über OpenAI."
+            case .mistralVoxtral:
+                return "Online: Voxtral Mini über Mistral."
+            }
         case .localTranscription:
             return "Nur lokal. Kein Server."
         case .textImprover, .dampfAblassen, .emojiText:
@@ -167,6 +174,7 @@ final class AppState {
                 customTerms: textImprovementSettings.customTerms,
                 language: transcriptionSettings.language,
                 backend: appSettings.secureLocalModeEnabled ? .local : .remote,
+                provider: appSettings.transcriptionProvider,
                 localModelName: selectedLocalModelName
             )
             configureWorkflowHandlers(workflow)
@@ -225,7 +233,7 @@ final class AppState {
         case .transcription:
             return appSettings.secureLocalModeEnabled
                 ? selectedLocalModelIsInstalled
-                : KeychainService.isConfigured
+                : KeychainService.load(key: appSettings.transcriptionProvider.keychainKey) != nil
         case .textImprover, .dampfAblassen, .emojiText:
             return !appSettings.secureLocalModeEnabled && KeychainService.isConfigured
         }

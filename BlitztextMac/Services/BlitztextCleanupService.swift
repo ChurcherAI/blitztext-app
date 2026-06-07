@@ -20,6 +20,7 @@ enum BlitztextCleanupService {
 
     static func cleanupUserData() -> CleanupReport {
         KeychainService.delete(key: .openAIAPIKey)
+        KeychainService.delete(key: .mistralAPIKey)
 
         return cleanup(paths: [
             AppSupportPaths.settingsURL,
@@ -36,6 +37,7 @@ enum BlitztextCleanupService {
 
     static func removeApplicationSupportFiles() -> CleanupReport {
         KeychainService.delete(key: .openAIAPIKey)
+        KeychainService.delete(key: .mistralAPIKey)
 
         return cleanup(
             paths: [

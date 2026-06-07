@@ -68,6 +68,9 @@ struct AccessSettingsView: View {
     @State private var currentInstallLocation = BlitztextInstallLocationService.currentInstallLocation
     @State private var openAIAPIKey = ""
     @State private var editingAPIKey = false
+    @State private var mistralAPIKey = ""
+    @State private var editingMistralAPIKey = false
+    @State private var mistralKeyErrorText: String?
     @State private var saved = false
     @State private var saveErrorText: String?
     @State private var installActionErrorText: String?
@@ -158,6 +161,80 @@ struct AccessSettingsView: View {
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel(text: "Transkriptions-Anbieter")
+
+                Picker("", selection: $appState.appSettings.transcriptionProvider) {
+                    ForEach(TranscriptionProvider.allCases) { provider in
+                        Text(provider.displayName).tag(provider)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 320)
+
+                Text("Legt fest, welcher Online-Dienst die Blitztext-Transkription übernimmt (nicht relevant im sicheren lokalen Modus).")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if appState.appSettings.transcriptionProvider == .mistralVoxtral {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        SectionLabel(text: "Mistral API Key")
+                        Spacer()
+                        if appState.hasValue(for: .mistralAPIKey) && !editingMistralAPIKey {
+                            Button("Aendern") { editingMistralAPIKey = true }
+                                .font(.system(size: 10, weight: .medium))
+                                .buttonStyle(.plain)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+
+                    if appState.hasValue(for: .mistralAPIKey) && !editingMistralAPIKey {
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.green.opacity(0.8))
+                            Text(appState.apiKeyDisplayValue(for: .mistralAPIKey))
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(nsColor: .controlBackgroundColor))
+                        )
+                    } else {
+                        HStack(spacing: 8) {
+                            SecureField("Mistral API Key", text: $mistralAPIKey)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 11.5))
+
+                            Button("Speichern") {
+                                saveMistralAPIKey()
+                            }
+                            .buttonStyle(SubtleButtonStyle())
+                            .disabled(mistralAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+
+                    if let mistralKeyErrorText {
+                        Text(mistralKeyErrorText)
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Text("Dein Key bleibt lokal in dieser App. Audio wird direkt an die Mistral API gesendet (Modell voxtral-mini-latest).")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -368,6 +445,7 @@ struct AccessSettingsView: View {
 
     private func load() {
         openAIAPIKey = ""
+        mistralAPIKey = ""
     }
 
     private func save() {
@@ -401,6 +479,21 @@ struct AccessSettingsView: View {
         withAnimation(.easeInOut(duration: 0.2)) { saved = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation(.easeInOut(duration: 0.2)) { saved = false }
+        }
+    }
+
+    private func saveMistralAPIKey() {
+        mistralKeyErrorText = nil
+        let trimmedKey = mistralAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedKey.isEmpty else { return }
+
+        do {
+            try KeychainService.save(key: .mistralAPIKey, value: trimmedKey)
+            KeychainService.invalidateCache()
+            mistralAPIKey = ""
+            editingMistralAPIKey = false
+        } catch {
+            mistralKeyErrorText = "Mistral API Key konnte nicht gespeichert werden."
         }
     }
 
